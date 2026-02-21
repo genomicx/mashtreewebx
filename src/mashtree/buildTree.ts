@@ -24,7 +24,9 @@ export function buildNeighborJoiningTree(
     )
   }
 
-  const tree = parseMatrix(matrix, names)
+  // Deep copy the matrix because patristic mutates it during NJ
+  const matrixCopy = matrix.map((row) => [...row])
+  const tree = parseMatrix(matrixCopy, names)
   return tree.toNewick()
 }
 
