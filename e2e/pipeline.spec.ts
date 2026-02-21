@@ -89,7 +89,7 @@ test.describe('Pipeline E2E', () => {
     await expect(page.locator('h2:has-text("Phylogenetic Tree")')).toBeVisible()
 
     // Verify log section appears with entries
-    await expect(page.locator('h2:has-text("Log")')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Log', exact: true })).toBeVisible()
     const logEntries = page.locator('.log-line')
     expect(await logEntries.count()).toBeGreaterThan(0)
   })
@@ -163,7 +163,7 @@ test.describe('Pipeline E2E', () => {
     await fileInput.setInputFiles(fastaFiles)
     await page.click('button:has-text("Build Tree")')
 
-    await expect(page.locator('h2:has-text("Log")')).toBeVisible({
+    await expect(page.getByRole('heading', { name: 'Log', exact: true })).toBeVisible({
       timeout: 90_000,
     })
 
