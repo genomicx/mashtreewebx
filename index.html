@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Browser-based phylogenetic trees from genome assemblies using Mash MinHash distances and neighbor-joining. No data leaves your machine." />
+    <meta name="author" content="Nabil-Fareed Alikhan" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="mashtreewebx — Browser-based Phylogenetic Trees" />
+    <meta property="og:description" content="Build phylogenetic trees from genome assemblies using Mash WebAssembly entirely in your browser. No server required, no data uploaded." />
+    <meta property="og:type" content="website" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="mashtreewebx — Browser-based Phylogenetic Trees" />
+    <meta name="twitter:description" content="Build phylogenetic trees from genome assemblies using Mash WebAssembly entirely in your browser." />
+    <meta name="twitter:creator" content="@happy_khan" />
+
+    <title>mashtreewebx — Browser-based Phylogenetic Trees</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <!-- Mash WASM — loaded from public/wasm/ as a script tag (Emscripten MODULARIZE pattern) -->
+    <script src="/wasm/mash.js"></script>
+    <!-- phylocanvas.gl for tree visualization -->
+    <script src="https://unpkg.com/@phylocanvas/phylocanvas.gl@1.61.0/dist/bundle.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
