@@ -9,7 +9,7 @@ import { buildNeighborJoiningTree, sortGenomes } from './buildTree'
  * We parse the Newick string to extract the sets of leaves under each
  * internal node and represent each bipartition canonically.
  */
-function extractBipartitions(newick: string, allLeaves: string[]): Set<string>[] {
+export function extractBipartitions(newick: string, allLeaves: string[]): Set<string>[] {
   const bipartitions: Set<string>[] = []
   const leafSet = new Set(allLeaves)
 
@@ -92,7 +92,7 @@ function extractBipartitions(newick: string, allLeaves: string[]): Set<string>[]
 /**
  * Convert bipartition set to a canonical string key for comparison.
  */
-function bipartitionKey(bp: Set<string>): string {
+export function bipartitionKey(bp: Set<string>): string {
   return [...bp].sort().join('\t')
 }
 
@@ -103,7 +103,7 @@ function bipartitionKey(bp: Set<string>): string {
  * replicate trees have the same bipartition, and adds the
  * support percentage as the internal node label.
  */
-function addSupportValues(
+export function addSupportValues(
   newick: string,
   allLeaves: string[],
   replicateNewickStrings: string[],
@@ -142,7 +142,7 @@ function addSupportValues(
 /**
  * Re-parse newick and annotate internal nodes with support values.
  */
-function annotateNewick(
+export function annotateNewick(
   newick: string,
   allLeaves: string[],
   supportMap: Map<string, number>,
