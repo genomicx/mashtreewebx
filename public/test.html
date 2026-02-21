@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mash WASM Debug Test</title>
+  <style>
+    body { font-family: monospace; padding: 2rem; background: #1a1a2e; color: #e0e0e0; }
+    #log { white-space: pre-wrap; background: #0f0f23; padding: 1rem; border-radius: 8px; max-height: 80vh; overflow-y: auto; }
+    .err { color: #ff6b6b; }
+    .ok { color: #51cf66; }
+    .info { color: #74c0fc; }
+    button { padding: 0.5rem 1.5rem; font-size: 1rem; margin: 0.5rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Mash WASM Debug Test</h1>
+  <p>This page tests Mash WASM sketch + triangle with small inline FASTA sequences.</p>
+  <button onclick="runTest()">Run Test</button>
+  <button onclick="runFileTest()">Run with File Upload</button>
+  <input type="file" id="fileInput" multiple accept=".fna,.fasta,.fa,.gz">
+  <div id="log"></div>
+
+  <script src="/wasm/mash.js"></script>
+  <script>
+    const logEl = document.getElementById('log');
+    function log(msg, cls = '') {
+      const line = document.createElement('div');
+      line.className = cls;
+      line.textContent = `[${new Date().toISOString().split('T')[1]}] ${msg}`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(msg);
+    }
+
+    // Small test FASTA sequences (synthetic but enough to test Mash)
+    function makeTestFasta(name, length, seed) {
+      const bases = 'ACGT';
+      let seq = `>${name}\n`;
+      let s = seed;
+      for (let i = 0; i < length; i++) {
+        s = (s * 1103515245 + 12345) & 0x7fffffff;
+        seq += bases[s % 4];
+        if ((i + 1) % 70 === 0) seq += '\n';
+      }
+      seq += '\n';
+      return seq;
+    }
+
+    let wasmBinaryCache = null;
+
+    async function loadWasmBinary() {
+      if (wasmBinaryCache) return wasmBinaryCache;
+      log('Fetching mash.wasm...', 'info');
+      const resp = await fetch('/wasm/mash.wasm');
+      if (!resp.ok) throw new Error('Failed to fetch mash.wasm: ' + resp.status);
+      wasmBinaryCache = await resp.arrayBuffer();
+      log(`mash.wasm loaded: ${wasmBinaryCache.byteLength} bytes`, 'ok');
+      return wasmBinaryCache;
+    }
+
+    async function createMashInstance(label) {
+      const wasmBinary = await loadWasmBinary();
+      log(`Creating instance "${label}"...`, 'info');
+
+      const mashFactory = window.Module;
+      if (!mashFactory) throw new Error('window.Module not found!');
+      log(`  window.Module type: ${typeof mashFactory}`, 'info');
+
+      let stdout = '', stderr = '';
+      const instance = await mashFactory({
+        wasmBinary: new Uint8Array(wasmBinary),
+        print: (t) => { stdout += t + '\n'; },
+        printErr: (t) => { stderr += t + '\n'; },
+        noInitialRun: true,
+      });
+
+      log(`  Instance "${label}" created. Has callMain: ${typeof instance.callMain}, Has FS: ${!!instance.FS}`, 'ok');
+
+      const run = (args) => {
+        stdout = ''; stderr = '';
+        log(`  > mash ${args.join(' ')}`, 'info');
+        try {
+          instance.callMain(args);
+        } catch(e) {
+          log(`  callMain threw: ${e.message || e}`, 'err');
+        }
+        if (stderr.trim()) log(`  stderr: ${stderr.trim()}`, stderr.includes('ERROR') ? 'err' : '');
+        if (stdout.trim()) log(`  stdout (${stdout.trim().length} chars): ${stdout.trim().substring(0, 300)}`, 'ok');
+        return { stdout: stdout.trim(), stderr: stderr.trim() };
+      };
+
+      return { instance, run };
+    }
+
+    async function runTest() {
+      logEl.innerHTML = '';
+      log('=== SYNTHETIC DATA TEST ===', 'info');
+
+      try {
+        // Create 3 synthetic genomes (~10KB each)
+        const genomes = [
+          { name: 'genome_A.fna', data: makeTestFasta('genA', 10000, 1) },
+          { name: 'genome_B.fna', data: makeTestFasta('genB', 10000, 2) },
+          { name: 'genome_C.fna', data: makeTestFasta('genC', 10000, 1) }, // same seed as A
+        ];
+
+        // Instance 1: sketch
+        const sketchMash = await createMashInstance('sketch');
+        sketchMash.instance.FS.mkdirTree('/data');
+
+        const paths = [];
+        for (const g of genomes) {
+          const data = new TextEncoder().encode(g.data);
+          sketchMash.instance.FS.writeFile('/data/' + g.name, data);
+          paths.push('/data/' + g.name);
+          log(`Wrote ${g.name}: ${data.length} bytes`);
+        }
+
+        log('--- Sketching ---', 'info');
+        const sketchResult = sketchMash.run(['sketch', '-o', '/data/all', '-k', '21', '-s', '1000', '-S', '42', ...paths]);
+
+        let mshData;
+        try {
+          mshData = sketchMash.instance.FS.readFile('/data/all.msh');
+          log(`Sketch file: ${mshData.length} bytes`, 'ok');
+        } catch(e) {
+          log(`FAILED to read /data/all.msh: ${e.message}`, 'err');
+          return;
+        }
+
+        // Instance 2: triangle
+        log('--- Triangle (fresh instance) ---', 'info');
+        const triMash = await createMashInstance('triangle');
+        triMash.instance.FS.mkdirTree('/data');
+        triMash.instance.FS.writeFile('/data/all.msh', mshData);
+
+        const triResult = triMash.run(['triangle', '/data/all.msh']);
+        log('=== FULL TRIANGLE OUTPUT ===', 'info');
+        log(triResult.stdout || '(empty)', triResult.stdout ? 'ok' : 'err');
+
+        // Also test: sketch + triangle on SAME instance
+        log('\n--- Comparison: sketch+triangle on SAME instance ---', 'info');
+        const singleMash = await createMashInstance('single');
+        singleMash.instance.FS.mkdirTree('/data');
+        for (const g of genomes) {
+          const data = new TextEncoder().encode(g.data);
+          singleMash.instance.FS.writeFile('/data/' + g.name, data);
+        }
+        singleMash.run(['sketch', '-o', '/data/all', '-k', '21', '-s', '1000', '-S', '42', ...paths]);
+        log('Now running triangle on same instance...', 'info');
+        const sameTriResult = singleMash.run(['triangle', '/data/all.msh']);
+        log('=== SAME INSTANCE TRIANGLE OUTPUT ===', 'info');
+        log(sameTriResult.stdout || '(empty)', sameTriResult.stdout ? 'ok' : 'err');
+
+        log('\n=== TEST COMPLETE ===', 'ok');
+      } catch(e) {
+        log(`ERROR: ${e.message}`, 'err');
+        log(e.stack, 'err');
+      }
+    }
+
+    async function runFileTest() {
+      logEl.innerHTML = '';
+      const fileInput = document.getElementById('fileInput');
+      const files = fileInput.files;
+      if (files.length < 2) {
+        log('Upload at least 2 FASTA files first!', 'err');
+        return;
+      }
+
+      log(`=== FILE UPLOAD TEST (${files.length} files) ===`, 'info');
+
+      try {
+        // Instance 1: sketch
+        const sketchMash = await createMashInstance('sketch');
+        sketchMash.instance.FS.mkdirTree('/data');
+
+        const paths = [];
+        for (let i = 0; i < files.length; i++) {
+          const f = files[i];
+          log(`Reading ${f.name} (${f.size} bytes)...`, 'info');
+          const ab = await f.arrayBuffer();
+          const data = new Uint8Array(ab);
+          log(`  ArrayBuffer: ${ab.byteLength} bytes, Uint8Array: ${data.length} bytes`, 'info');
+          log(`  First 50 bytes: ${String.fromCharCode(...data.slice(0, 50))}`, 'info');
+
+          const path = '/data/' + f.name;
+          sketchMash.instance.FS.writeFile(path, data);
+          paths.push(path);
+
+          // Verify the file was written
+          const readBack = sketchMash.instance.FS.readFile(path);
+          log(`  Verified: wrote ${data.length}, read back ${readBack.length} bytes`,
+              data.length === readBack.length ? 'ok' : 'err');
+        }
+
+        log('--- Sketching ---', 'info');
+        const sketchResult = sketchMash.run([
+          'sketch', '-o', '/data/all',
+          '-k', '21', '-s', '10000', '-S', '42',
+          ...paths
+        ]);
+
+        let mshData;
+        try {
+          mshData = sketchMash.instance.FS.readFile('/data/all.msh');
+          log(`Sketch file: ${mshData.length} bytes`, 'ok');
+        } catch(e) {
+          log(`FAILED to read /data/all.msh: ${e.message}`, 'err');
+
+          // Try listing the directory
+          try {
+            const ls = sketchMash.instance.FS.readdir('/data');
+            log(`/data contents: ${ls.join(', ')}`, 'info');
+          } catch(e2) {
+            log(`Cannot list /data: ${e2.message}`, 'err');
+          }
+          return;
+        }
+
+        // Instance 2: triangle
+        log('--- Triangle (fresh instance) ---', 'info');
+        const triMash = await createMashInstance('triangle');
+        triMash.instance.FS.mkdirTree('/data');
+        triMash.instance.FS.writeFile('/data/all.msh', mshData);
+
+        // Verify .msh was written
+        const readMsh = triMash.instance.FS.readFile('/data/all.msh');
+        log(`  Verified .msh in triangle instance: ${readMsh.length} bytes`,
+            readMsh.length === mshData.length ? 'ok' : 'err');
+
+        const triResult = triMash.run(['triangle', '/data/all.msh']);
+        log('=== FULL TRIANGLE OUTPUT ===', 'info');
+        log(triResult.stdout || '(empty stdout)', triResult.stdout ? 'ok' : 'err');
+
+        log('\n=== TEST COMPLETE ===', 'ok');
+      } catch(e) {
+        log(`ERROR: ${e.message}`, 'err');
+        log(e.stack, 'err');
+      }
+    }
+  </script>
+</body>
+</html>
