@@ -1,10 +1,10 @@
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback, useState, memo } from 'react'
 
 interface LogConsoleProps {
   lines: string[]
 }
 
-export function LogConsole({ lines }: LogConsoleProps) {
+export const LogConsole = memo(function LogConsole({ lines }: LogConsoleProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
 
@@ -44,4 +44,4 @@ export function LogConsole({ lines }: LogConsoleProps) {
       </div>
     </section>
   )
-}
+})

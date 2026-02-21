@@ -275,40 +275,52 @@ export async function runBootstrap(
       ? Math.max(100, Math.floor(options.sketchSize / 2))
       : options.sketchSize
 
-  for (let i = 0; i < replicates; i++) {
-    const seed = options.seed + i + 1
-    const pct = ((i + 1) / replicates) * 100
+  const batchSize = Math.min(navigator?.hardwareConcurrency ?? 4, 4)
 
+  for (let batchStart = 0; batchStart < replicates; batchStart += batchSize) {
+    const batchEnd = Math.min(batchStart + batchSize, replicates)
+    const batchPromises: Promise<string | null>[] = []
+
+    for (let i = batchStart; i < batchEnd; i++) {
+      const seed = options.seed + i + 1
+      batchPromises.push(
+        (async () => {
+          try {
+            const repOptions = { ...options, sketchSize, seed }
+            const distResult = await computeDistanceMatrixWithSeed(
+              files,
+              repOptions,
+              seed,
+            )
+            const sorted = sortGenomes(
+              distResult.matrix,
+              distResult.names,
+              options.sortOrder,
+            )
+            return buildNeighborJoiningTree(sorted.matrix, sorted.names)
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err)
+            onLog(`Replicate ${i + 1} failed: ${msg}`)
+            return null
+          }
+        })(),
+      )
+    }
+
+    const results = await Promise.all(batchPromises)
+    for (const newick of results) {
+      if (newick) replicateNewicks.push(newick)
+    }
+
+    const completed = batchEnd
+    const pct = (completed / replicates) * 100
     onProgress(
-      `${method === 'bootstrap' ? 'Bootstrap' : 'Jackknife'} replicate ${i + 1}/${replicates}...`,
+      `${method === 'bootstrap' ? 'Bootstrap' : 'Jackknife'} replicate ${completed}/${replicates}...`,
       pct,
     )
 
-    try {
-      const repOptions = { ...options, sketchSize, seed }
-      const distResult = await computeDistanceMatrixWithSeed(
-        files,
-        repOptions,
-        seed,
-      )
-
-      const sorted = sortGenomes(
-        distResult.matrix,
-        distResult.names,
-        options.sortOrder,
-      )
-
-      const repNewick = buildNeighborJoiningTree(sorted.matrix, sorted.names)
-      replicateNewicks.push(repNewick)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      onLog(`Replicate ${i + 1} failed: ${msg}`)
-    }
-
-    if ((i + 1) % 10 === 0 || i === replicates - 1) {
-      onLog(
-        `Completed ${i + 1}/${replicates} ${method} replicates`,
-      )
+    if (completed % 10 === 0 || completed === replicates) {
+      onLog(`Completed ${completed}/${replicates} ${method} replicates`)
     }
   }
 

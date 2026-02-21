@@ -42,19 +42,15 @@ export async function runMashtree(
   onProgress('Reading files...', 2)
   onLog('Reading genome files...')
 
-  const files: { name: string; data: Uint8Array }[] = []
-  for (let i = 0; i < inputFiles.length; i++) {
-    const f = inputFiles[i]
-    onLog(`Reading ${f.name}...`)
-    const data = await readFileBytes(f)
-
-    files.push({ name: f.name, data })
-    onLog(`  ${data.length} bytes`)
-    onProgress(
-      `Reading files... (${i + 1}/${inputFiles.length})`,
-      2 + (i / inputFiles.length) * 3,
-    )
-  }
+  const files = await Promise.all(
+    inputFiles.map(async (f) => {
+      onLog(`Reading ${f.name}...`)
+      const data = await readFileBytes(f)
+      onLog(`  ${data.length} bytes`)
+      return { name: f.name, data }
+    }),
+  )
+  onProgress(`Reading files... (${files.length}/${inputFiles.length})`, 5)
 
   // Step 2: Sort by name if requested
   // (Sorting is applied after computing the distance matrix,

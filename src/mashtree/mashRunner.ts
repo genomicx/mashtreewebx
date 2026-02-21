@@ -19,17 +19,17 @@ interface MashRunResult {
   stderr: string
 }
 
-// Cache the WASM binary so we only fetch once
-let wasmBinaryCache: ArrayBuffer | null = null
+// Cache the WASM binary as Uint8Array so we only fetch and convert once
+let wasmBinaryCache: Uint8Array | null = null
 
 /**
  * Load the Mash WASM binary (cached after first fetch).
  */
-async function loadWasmBinary(): Promise<ArrayBuffer> {
+async function loadWasmBinary(): Promise<Uint8Array> {
   if (wasmBinaryCache) return wasmBinaryCache
   const response = await fetch('/wasm/mash.wasm')
   if (!response.ok) throw new Error(`Failed to fetch mash.wasm: ${response.status}`)
-  wasmBinaryCache = await response.arrayBuffer()
+  wasmBinaryCache = new Uint8Array(await response.arrayBuffer())
   return wasmBinaryCache
 }
 
@@ -56,29 +56,32 @@ export async function createMashInstance(): Promise<{
     )
   }
 
-  let stdout = ''
-  let stderr = ''
+  let stdoutChunks: string[] = []
+  let stderrChunks: string[] = []
 
   const instance: MashInstance = await mashFactory({
-    wasmBinary: new Uint8Array(wasmBinary),
+    wasmBinary,
     print: (text: string) => {
-      stdout += text + '\n'
+      stdoutChunks.push(text)
     },
     printErr: (text: string) => {
-      stderr += text + '\n'
+      stderrChunks.push(text)
     },
     noInitialRun: true,
   })
 
   const run = (args: string[]): MashRunResult => {
-    stdout = ''
-    stderr = ''
+    stdoutChunks = []
+    stderrChunks = []
     try {
       instance.callMain(args)
     } catch {
       // Mash may call exit() which throws in Emscripten
     }
-    return { stdout: stdout.trim(), stderr: stderr.trim() }
+    return {
+      stdout: stdoutChunks.join('\n').trim(),
+      stderr: stderrChunks.join('\n').trim(),
+    }
   }
 
   return { instance, run }
@@ -180,11 +183,9 @@ export async function computeDistanceMatrix(
     )
   }
 
-  // Log raw triangle output for debugging
-  log(`Triangle raw output (${triResult.stdout.length} chars):`)
-  for (const line of triResult.stdout.split('\n')) {
-    log(`  | ${line}`)
-  }
+  // Log triangle output summary
+  const triLines = triResult.stdout.split('\n')
+  log(`Triangle output: ${triResult.stdout.length} chars, ${triLines.length} lines`)
 
   // Parse triangle output (Phylip lower-triangle format)
   return parseTriangleOutput(triResult.stdout, log)
@@ -236,8 +237,6 @@ export function parseTriangleOutput(
       '',
     )
     names.push(name)
-
-    log?.(`  Row ${i}: "${name}" — ${parts.length - 1} distance(s): [${parts.slice(1).join(', ')}]`)
 
     // Remaining parts are distances (lower triangle)
     for (let j = 1; j < parts.length; j++) {

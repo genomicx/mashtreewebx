@@ -120,8 +120,6 @@ describe('parseTriangleOutput', () => {
     expect(logMessages.some((m) => m.includes('N=3'))).toBe(true)
     // Should log parsed matrix info
     expect(logMessages.some((m) => m.includes('3x3'))).toBe(true)
-    // Should log individual row details
-    expect(logMessages.some((m) => m.includes('Row 0'))).toBe(true)
   })
 
   it('throws an error on empty input', () => {
