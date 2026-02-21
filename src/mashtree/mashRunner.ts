@@ -104,8 +104,13 @@ export function writeFileToMash(
 }
 
 /**
- * Sketch a genome and compute distances using a single Mash instance.
- * Returns the distance matrix parsed from mash triangle output.
+ * Sketch genomes and compute distances.
+ *
+ * IMPORTANT: Emscripten modules cannot reliably call main() twice —
+ * after the first callMain() the global state is corrupted (exit() is
+ * called internally). We therefore use a FRESH WASM instance for each
+ * command invocation and shuttle .msh files between instances via
+ * readFile/writeFile on the virtual FS.
  */
 export async function computeDistanceMatrix(
   files: { name: string; data: Uint8Array }[],
@@ -115,21 +120,21 @@ export async function computeDistanceMatrix(
 ): Promise<{ matrix: number[][]; names: string[] }> {
   const log = (msg: string) => onLog?.(msg)
 
-  log('Initializing Mash WASM...')
-  onProgress?.('Initializing Mash WASM...', 5)
-  const { instance, run } = await createMashInstance()
+  // Step 1: Sketch all genomes together (fresh instance #1)
+  onProgress?.('Sketching genomes...', 10)
+  log('Initializing Mash WASM for sketching...')
+  const sketchMash = await createMashInstance()
 
   // Write all genome files to virtual filesystem
   const paths: string[] = []
   for (let i = 0; i < files.length; i++) {
     const f = files[i]
     const path = `/data/${f.name}`
-    writeFileToMash(instance, path, f.data)
+    writeFileToMash(sketchMash.instance, path, f.data)
     paths.push(path)
     log(`Loaded ${f.name} (${f.data.length} bytes)`)
   }
 
-  // Sketch all genomes
   const sketchArgs = [
     'sketch',
     '-o',
@@ -143,16 +148,37 @@ export async function computeDistanceMatrix(
     ...paths,
   ]
 
-  onProgress?.('Sketching genomes...', 20)
   log(`Running: mash ${sketchArgs.join(' ')}`)
-  const sketchResult = run(sketchArgs)
+  const sketchResult = sketchMash.run(sketchArgs)
   if (sketchResult.stderr) log(sketchResult.stderr)
 
-  // Run triangle to get distance matrix
-  onProgress?.('Computing pairwise distances...', 60)
+  // Read the .msh file from the sketch instance's virtual FS
+  let mshData: Uint8Array
+  try {
+    mshData = sketchMash.instance.FS.readFile('/data/all.msh')
+    log(`Sketch file: ${mshData.length} bytes`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    throw new Error(`Failed to read sketch file: ${msg}`)
+  }
+
+  // Step 2: Run triangle on a FRESH instance (avoids corrupted state)
+  onProgress?.('Computing pairwise distances...', 50)
+  log('Initializing fresh Mash WASM for triangle...')
+  const triMash = await createMashInstance()
+
+  // Write the .msh file to the new instance
+  writeFileToMash(triMash.instance, '/data/all.msh', mshData)
+
   log('Running: mash triangle /data/all.msh')
-  const triResult = run(['triangle', '/data/all.msh'])
+  const triResult = triMash.run(['triangle', '/data/all.msh'])
   if (triResult.stderr) log(triResult.stderr)
+
+  if (!triResult.stdout.trim()) {
+    throw new Error(
+      'Mash triangle produced no output. stderr: ' + triResult.stderr,
+    )
+  }
 
   // Parse triangle output (Phylip lower-triangle format)
   return parseTriangleOutput(triResult.stdout, log)
@@ -220,18 +246,20 @@ export function parseTriangleOutput(
 /**
  * Compute distance matrix for a single bootstrap/jackknife replicate.
  * Uses a different seed to get different hash function.
+ * Uses two fresh WASM instances (one for sketch, one for triangle).
  */
 export async function computeDistanceMatrixWithSeed(
   files: { name: string; data: Uint8Array }[],
   options: MashOptions,
   seed: number,
 ): Promise<{ matrix: number[][]; names: string[] }> {
-  const { instance, run } = await createMashInstance()
+  // Instance #1: sketch
+  const sketchMash = await createMashInstance()
 
   const paths: string[] = []
   for (const f of files) {
     const path = `/data/${f.name}`
-    writeFileToMash(instance, path, f.data)
+    writeFileToMash(sketchMash.instance, path, f.data)
     paths.push(path)
   }
 
@@ -247,8 +275,15 @@ export async function computeDistanceMatrixWithSeed(
     String(seed),
     ...paths,
   ]
-  run(sketchArgs)
+  sketchMash.run(sketchArgs)
 
-  const triResult = run(['triangle', '/data/all.msh'])
+  // Read .msh from sketch instance
+  const mshData = sketchMash.instance.FS.readFile('/data/all.msh')
+
+  // Instance #2: triangle (fresh state)
+  const triMash = await createMashInstance()
+  writeFileToMash(triMash.instance, '/data/all.msh', mshData)
+
+  const triResult = triMash.run(['triangle', '/data/all.msh'])
   return parseTriangleOutput(triResult.stdout)
 }
