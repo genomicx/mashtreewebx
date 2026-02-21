@@ -180,6 +180,12 @@ export async function computeDistanceMatrix(
     )
   }
 
+  // Log raw triangle output for debugging
+  log(`Triangle raw output (${triResult.stdout.length} chars):`)
+  for (const line of triResult.stdout.split('\n')) {
+    log(`  | ${line}`)
+  }
+
   // Parse triangle output (Phylip lower-triangle format)
   return parseTriangleOutput(triResult.stdout, log)
 }
@@ -209,6 +215,8 @@ export function parseTriangleOutput(
     throw new Error(`Invalid triangle output: expected N >= 2, got "${lines[0]}"`)
   }
 
+  log?.(`Triangle has ${lines.length} non-empty lines, N=${n}`)
+
   const names: string[] = []
   const matrix: number[][] = Array.from({ length: n }, () =>
     Array(n).fill(0),
@@ -228,6 +236,8 @@ export function parseTriangleOutput(
       '',
     )
     names.push(name)
+
+    log?.(`  Row ${i}: "${name}" — ${parts.length - 1} distance(s): [${parts.slice(1).join(', ')}]`)
 
     // Remaining parts are distances (lower triangle)
     for (let j = 1; j < parts.length; j++) {
