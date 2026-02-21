@@ -1,12 +1,26 @@
 import type { MashOptions, BootstrapOptions, MashtreeResult } from './types'
-import { parseFastaFile } from './parseFasta'
 import { computeDistanceMatrix } from './mashRunner'
 import { buildNeighborJoiningTree, sortGenomes } from './buildTree'
 import { runBootstrap } from './bootstrap'
 
 /**
+ * Read a File as raw bytes, decompressing .gz files if needed.
+ * We pass raw FASTA bytes straight to Mash — no parsing/re-encoding
+ * needed since Mash handles FASTA natively.
+ */
+async function readFileBytes(file: File): Promise<Uint8Array> {
+  if (file.name.endsWith('.gz')) {
+    const ds = new DecompressionStream('gzip')
+    const decompressed = file.stream().pipeThrough(ds)
+    const blob = await new Response(decompressed).blob()
+    return new Uint8Array(await blob.arrayBuffer())
+  }
+  return new Uint8Array(await file.arrayBuffer())
+}
+
+/**
  * Run the full mashtree pipeline:
- * 1. Parse uploaded FASTA files (handles .gz)
+ * 1. Read uploaded FASTA files as raw bytes (decompress .gz)
  * 2. Sort genome names by sortOrder
  * 3. Sketch each genome with Mash WASM
  * 4. Compute pairwise distance matrix via mash triangle
@@ -24,27 +38,20 @@ export async function runMashtree(
     throw new Error('At least 2 genome files are required')
   }
 
-  // Step 1: Parse FASTA files
-  onProgress('Parsing FASTA files...', 2)
-  onLog('Parsing FASTA files...')
+  // Step 1: Read raw file bytes (Mash handles FASTA natively)
+  onProgress('Reading files...', 2)
+  onLog('Reading genome files...')
 
   const files: { name: string; data: Uint8Array }[] = []
   for (let i = 0; i < inputFiles.length; i++) {
     const f = inputFiles[i]
     onLog(`Reading ${f.name}...`)
-    const parsed = await parseFastaFile(f)
-
-    // Re-encode contigs as a single FASTA string → Uint8Array
-    let fastaContent = ''
-    for (const contig of parsed.contigs) {
-      fastaContent += `>${contig.name}\n${contig.sequence}\n`
-    }
-    const data = new TextEncoder().encode(fastaContent)
+    const data = await readFileBytes(f)
 
     files.push({ name: f.name, data })
-    onLog(`  ${parsed.contigs.length} contig(s), ${data.length} bytes`)
+    onLog(`  ${data.length} bytes`)
     onProgress(
-      `Parsing files... (${i + 1}/${inputFiles.length})`,
+      `Reading files... (${i + 1}/${inputFiles.length})`,
       2 + (i / inputFiles.length) * 3,
     )
   }
