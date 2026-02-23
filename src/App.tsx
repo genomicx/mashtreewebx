@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { FileUpload } from './components/FileUpload'
 import { MashOptions } from './components/MashOptions'
 import { DistanceMatrix } from './components/DistanceMatrix'
@@ -34,6 +34,9 @@ function App() {
 
   const [currentView, setCurrentView] = useState<View>('analysis')
 
+  const logBufferRef = useRef<string[]>([])
+  const rafIdRef = useRef<number>(0)
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('gx-theme', theme)
@@ -48,6 +51,11 @@ function App() {
     setDistanceMatrix([])
     setGenomeNames([])
     setLogLines([])
+    logBufferRef.current = []
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current)
+      rafIdRef.current = 0
+    }
     setProgress('Starting...')
     setProgressPct(0)
 
@@ -61,9 +69,28 @@ function App() {
           setProgressPct(pct)
         },
         (msg) => {
-          setLogLines((prev) => [...prev, msg])
+          logBufferRef.current.push(msg)
+          if (!rafIdRef.current) {
+            rafIdRef.current = requestAnimationFrame(() => {
+              rafIdRef.current = 0
+              const batch = logBufferRef.current
+              logBufferRef.current = []
+              setLogLines((prev) => [...prev, ...batch])
+            })
+          }
         },
       )
+
+      // Flush any remaining buffered log entries
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current)
+        rafIdRef.current = 0
+      }
+      if (logBufferRef.current.length > 0) {
+        const remaining = logBufferRef.current
+        logBufferRef.current = []
+        setLogLines((prev) => [...prev, ...remaining])
+      }
 
       setNewick(result.newick)
       setDistanceMatrix(result.distanceMatrix)

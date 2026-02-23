@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback, useState, memo } from 'react'
 
 // phylocanvas.gl is loaded from CDN in index.html
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -8,7 +8,7 @@ interface PhyloTreeProps {
   newick: string
 }
 
-export function PhyloTree({ newick }: PhyloTreeProps) {
+export const PhyloTree = memo(function PhyloTree({ newick }: PhyloTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const treeRef = useRef<any>(null)
@@ -61,9 +61,24 @@ export function PhyloTree({ newick }: PhyloTreeProps) {
   }, [newick])
 
   useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver((entries) => {
+        if (treeRef.current) {
+          const { width } = entries[0].contentRect
+          treeRef.current.setProps({
+            size: { width: width || 800, height: 500 },
+          })
+        }
+      })
+      observer.observe(container)
+      return () => observer.disconnect()
+    }
+    // Fallback for environments without ResizeObserver
     const handleResize = () => {
-      if (treeRef.current && containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect()
+      if (treeRef.current) {
+        const rect = container.getBoundingClientRect()
         treeRef.current.setProps({
           size: { width: rect.width || 800, height: 500 },
         })
@@ -97,4 +112,4 @@ export function PhyloTree({ newick }: PhyloTreeProps) {
       <div className="tree-container" ref={containerRef} />
     </section>
   )
-}
+})

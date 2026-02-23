@@ -1,11 +1,11 @@
-import { useCallback } from 'react'
+import { useCallback, memo } from 'react'
 
 interface DistanceMatrixProps {
   matrix: number[][]
   names: string[]
 }
 
-export function DistanceMatrix({ matrix, names }: DistanceMatrixProps) {
+export const DistanceMatrix = memo(function DistanceMatrix({ matrix, names }: DistanceMatrixProps) {
   const handleExportTSV = useCallback(() => {
     // Export in Phylip-like tab-separated format
     const n = names.length
@@ -68,4 +68,4 @@ export function DistanceMatrix({ matrix, names }: DistanceMatrixProps) {
       </div>
     </section>
   )
-}
+})

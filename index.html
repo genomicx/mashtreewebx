@@ -20,11 +20,14 @@
     <title>mashtreewebx — Browser-based Phylogenetic Trees</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" /></noscript>
+    <!-- Preload WASM binary -->
+    <link rel="preload" href="/wasm/mash.wasm" as="fetch" crossorigin />
     <!-- Mash WASM — loaded from public/wasm/ as a script tag (Emscripten MODULARIZE pattern) -->
-    <script src="/wasm/mash.js"></script>
+    <script src="/wasm/mash.js" defer></script>
     <!-- phylocanvas.gl for tree visualization -->
-    <script src="https://unpkg.com/@phylocanvas/phylocanvas.gl@1.61.0/dist/bundle.min.js"></script>
+    <script src="https://unpkg.com/@phylocanvas/phylocanvas.gl@1.61.0/dist/bundle.min.js" async></script>
   </head>
   <body>
     <div id="root"></div>
