@@ -29,14 +29,14 @@ function App() {
   const [genomeNames, setGenomeNames] = useState<string[]>([])
 
   const [theme, setTheme] = useState<Theme>(() => {
-    return (localStorage.getItem('mashtreewebx-theme') as Theme) || 'light'
+    return (localStorage.getItem('gx-theme') as Theme) || 'dark'
   })
 
   const [currentView, setCurrentView] = useState<View>('analysis')
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('mashtreewebx-theme', theme)
+    localStorage.setItem('gx-theme', theme)
   }, [theme])
 
   const handleRun = useCallback(async () => {
@@ -176,13 +176,14 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <a
-          href="https://www.happykhan.com"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Nabil-Fareed Alikhan
-        </a>
+        <div className="footer-inner">
+          <span>GenomicX &mdash; open-source bioinformatics for the browser</span>
+          <div className="footer-links">
+            <a href="https://github.com/genomicx" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://genomicx.vercel.app/about" target="_blank" rel="noopener noreferrer">Mission</a>
+            <a href="https://www.happykhan.com/" target="_blank" rel="noopener noreferrer">Nabil-Fareed Alikhan</a>
+          </div>
+        </div>
       </footer>
     </div>
   )
