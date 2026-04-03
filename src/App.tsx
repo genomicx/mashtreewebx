@@ -9,6 +9,7 @@ import { About } from './pages/About'
 import { runMashtree } from './mashtree/pipeline'
 import type { MashOptions as MashOptionsType, BootstrapOptions } from './mashtree/types'
 import { DEFAULT_MASH_OPTIONS, DEFAULT_BOOTSTRAP_OPTIONS } from './mashtree/types'
+import { APP_VERSION } from './lib/version'
 import './App.css'
 
 function AnalysisPage() {
@@ -133,7 +134,7 @@ function App() {
 
   return (
     <div className="app">
-      <NavBar appName="mashtreewebx" appSubtitle="Browser-based phylogenetic trees from genome assemblies" githubUrl="https://github.com/genomicx/mashtreewebx" icon={
+      <NavBar appName="mashtreewebx" appSubtitle="Browser-based phylogenetic trees from genome assemblies" version={APP_VERSION} githubUrl="https://github.com/genomicx/mashtreewebx" icon={
   <svg className="gx-nav-logo-icon" viewBox="0 0 24 24" fill="none" stroke="var(--gx-accent)" strokeWidth="2">
     {/* Phylogenetic tree */}
     <line x1="6" y1="20" x2="6" y2="4" />
