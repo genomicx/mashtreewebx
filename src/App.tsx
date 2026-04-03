@@ -133,7 +133,18 @@ function App() {
 
   return (
     <div className="app">
-      <NavBar appName="mashtreewebx" appSubtitle="Browser-based phylogenetic trees from genome assemblies" />
+      <NavBar appName="mashtreewebx" appSubtitle="Browser-based phylogenetic trees from genome assemblies" icon={
+  <svg className="gx-nav-logo-icon" viewBox="0 0 24 24" fill="none" stroke="var(--gx-accent)" strokeWidth="2">
+    {/* Phylogenetic tree */}
+    <line x1="6" y1="20" x2="6" y2="4" />
+    <line x1="6" y1="12" x2="18" y2="12" />
+    <line x1="18" y1="12" x2="18" y2="8" />
+    <line x1="18" y1="12" x2="18" y2="16" />
+    <circle cx="6" cy="4" r="2" fill="var(--gx-accent)" />
+    <circle cx="18" cy="8" r="2" fill="var(--gx-accent)" />
+    <circle cx="18" cy="16" r="2" fill="var(--gx-accent)" />
+  </svg>
+} />
 
       <main className="app-main">
         <Routes>
@@ -142,7 +153,7 @@ function App() {
         </Routes>
       </main>
 
-      <AppFooter appName="mashtreewebx" />
+      <AppFooter appName="mashtreewebx" bugReportUrl="https://github.com/genomicx/mashtreewebx/issues" />
     </div>
   )
 }
