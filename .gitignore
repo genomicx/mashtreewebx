@@ -1,28 +1,24 @@
-# Dependencies
-node_modules/
 
 # Build output
-dist/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Logs
-*.log
-npm-debug.log*
-
-# Cache
 .cache/
+# Cache
+# Dependencies
+dist/
+.DS_Store
+.env
+# Environment
+.env.*.local
+.env.local
+# IDE
+.idea/
+*.log
+# Logs
+node_modules/
+npm-debug.log*
+# OS
+package-lock.json
+*.swo
+*.swp
+Thumbs.db
 .vercel
+.vscode/
