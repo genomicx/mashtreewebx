@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { NavBar, AppFooter, LogConsole, FileUpload } from '@genomicx/ui'
+import { NavBar, AppFooter, LogConsole, FileUpload, ProgressBar } from '@genomicx/ui'
 import { MashOptions } from './components/MashOptions'
 import { DistanceMatrix } from './components/DistanceMatrix'
 import { PhyloTree } from './components/PhyloTree'
@@ -95,20 +95,7 @@ function AnalysisPage() {
 
       {running && (
         <section className="progress" aria-live="polite">
-          <div
-            className="progress-bar"
-            role="progressbar"
-            aria-valuenow={Math.round(progressPct)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Mashtree progress"
-          >
-            <div
-              className="progress-fill"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-          <p className="progress-text">{progress}</p>
+          <ProgressBar value={progressPct} label={progress} />
         </section>
       )}
 
