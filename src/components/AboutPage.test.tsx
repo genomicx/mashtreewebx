@@ -10,7 +10,7 @@ function renderAbout() {
 describe('About', () => {
   it('renders about mashtreewebx section', () => {
     renderAbout()
-    expect(screen.getByText('About mashtreewebx')).toBeInTheDocument()
+    expect(screen.getByText('About MashtreeWebX')).toBeInTheDocument()
   })
 
   it('renders author name', () => {
