@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { NavBar, AppFooter, LogConsole } from '@genomicx/ui'
-import { FileUpload } from './components/FileUpload'
+import { NavBar, AppFooter, LogConsole, FileUpload } from '@genomicx/ui'
 import { MashOptions } from './components/MashOptions'
 import { DistanceMatrix } from './components/DistanceMatrix'
 import { PhyloTree } from './components/PhyloTree'
@@ -72,6 +71,10 @@ function AnalysisPage() {
         <FileUpload
           files={files}
           onFilesChange={setFiles}
+          accept=".fasta,.fa,.fna,.fsa,.fasta.gz,.fa.gz,.fna.gz,.fsa.gz,.gz"
+          multiple={true}
+          label="Drop FASTA files here or click to browse"
+          hint=".fasta, .fa, .fna, .fsa, .gz"
           disabled={running}
         />
         <MashOptions
