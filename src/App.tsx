@@ -133,7 +133,7 @@ function App() {
 
   return (
     <div className="app">
-      <NavBar appName="mashtreewebx" appSubtitle="Browser-based phylogenetic trees from genome assemblies" icon={
+      <NavBar appName="mashtreewebx" appSubtitle="Browser-based phylogenetic trees from genome assemblies" githubUrl="https://github.com/genomicx/mashtreewebx" icon={
   <svg className="gx-nav-logo-icon" viewBox="0 0 24 24" fill="none" stroke="var(--gx-accent)" strokeWidth="2">
     {/* Phylogenetic tree */}
     <line x1="6" y1="20" x2="6" y2="4" />
