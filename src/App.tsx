@@ -1,19 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Routes, Route } from 'react-router-dom'
+import { NavBar, AppFooter, LogConsole } from '@genomicx/ui'
 import { FileUpload } from './components/FileUpload'
 import { MashOptions } from './components/MashOptions'
 import { DistanceMatrix } from './components/DistanceMatrix'
 import { PhyloTree } from './components/PhyloTree'
-import { LogConsole } from './components/LogConsole'
-import { AboutPage } from './components/AboutPage'
+import { About } from './pages/About'
 import { runMashtree } from './mashtree/pipeline'
 import type { MashOptions as MashOptionsType, BootstrapOptions } from './mashtree/types'
 import { DEFAULT_MASH_OPTIONS, DEFAULT_BOOTSTRAP_OPTIONS } from './mashtree/types'
 import './App.css'
 
-type Theme = 'light' | 'dark'
-type View = 'analysis' | 'about'
-
-function App() {
+function AnalysisPage() {
   const [files, setFiles] = useState<File[]>([])
   const [options, setOptions] = useState<MashOptionsType>(DEFAULT_MASH_OPTIONS)
   const [bootstrapOptions, setBootstrapOptions] = useState<BootstrapOptions>(DEFAULT_BOOTSTRAP_OPTIONS)
@@ -27,17 +25,6 @@ function App() {
   const [newick, setNewick] = useState('')
   const [distanceMatrix, setDistanceMatrix] = useState<number[][]>([])
   const [genomeNames, setGenomeNames] = useState<string[]>([])
-
-  const [theme, setTheme] = useState<Theme>(() => {
-    return (localStorage.getItem('gx-theme') as Theme) || 'dark'
-  })
-
-  const [currentView, setCurrentView] = useState<View>('analysis')
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('gx-theme', theme)
-  }, [theme])
 
   const handleRun = useCallback(async () => {
     if (files.length < 2) return
@@ -79,112 +66,83 @@ function App() {
   const canRun = files.length >= 2 && !running
 
   return (
+    <>
+      <div className="controls">
+        <FileUpload
+          files={files}
+          onFilesChange={setFiles}
+          disabled={running}
+        />
+        <MashOptions
+          options={options}
+          onOptionsChange={setOptions}
+          bootstrapOptions={bootstrapOptions}
+          onBootstrapChange={setBootstrapOptions}
+          disabled={running}
+        />
+        <button
+          className="run-button"
+          onClick={handleRun}
+          disabled={!canRun}
+        >
+          {running ? 'Running...' : 'Build Tree'}
+        </button>
+      </div>
+
+      {running && (
+        <section className="progress" aria-live="polite">
+          <div
+            className="progress-bar"
+            role="progressbar"
+            aria-valuenow={Math.round(progressPct)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Mashtree progress"
+          >
+            <div
+              className="progress-fill"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          <p className="progress-text">{progress}</p>
+        </section>
+      )}
+
+      {error && (
+        <section className="error" role="alert">
+          <p>{error}</p>
+        </section>
+      )}
+
+      {genomeNames.length > 0 && (
+        <DistanceMatrix matrix={distanceMatrix} names={genomeNames} />
+      )}
+
+      {newick && <PhyloTree newick={newick} />}
+
+      {logLines.length > 0 && <LogConsole logs={logLines} />}
+    </>
+  )
+}
+
+function App() {
+  useEffect(() => {
+    const saved = (localStorage.getItem('gx-theme') as 'light' | 'dark') || 'dark'
+    document.documentElement.setAttribute('data-theme', saved)
+  }, [])
+
+  return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-top">
-          <h1>mashtreewebx</h1>
-          <button
-            className="theme-toggle"
-            onClick={() =>
-              setTheme((t) => (t === 'light' ? 'dark' : 'light'))
-            }
-            aria-label="Toggle theme"
-          >
-            {theme === 'light' ? '\u263E' : '\u2600'}
-          </button>
-        </div>
-        <p className="subtitle">
-          Browser-based phylogenetic trees from genome assemblies
-        </p>
-        <nav className="tab-bar">
-          <button
-            className={`tab ${currentView === 'analysis' ? 'tab-active' : ''}`}
-            onClick={() => setCurrentView('analysis')}
-          >
-            Analysis
-          </button>
-          <button
-            className={`tab ${currentView === 'about' ? 'tab-active' : ''}`}
-            onClick={() => setCurrentView('about')}
-          >
-            About
-          </button>
-        </nav>
-      </header>
+      <NavBar appName="mashtreewebx" appSubtitle="Browser-based phylogenetic trees from genome assemblies" />
 
       <main className="app-main">
-        {currentView === 'analysis' ? (
-          <>
-            <div className="controls">
-              <FileUpload
-                files={files}
-                onFilesChange={setFiles}
-                disabled={running}
-              />
-              <MashOptions
-                options={options}
-                onOptionsChange={setOptions}
-                bootstrapOptions={bootstrapOptions}
-                onBootstrapChange={setBootstrapOptions}
-                disabled={running}
-              />
-              <button
-                className="run-button"
-                onClick={handleRun}
-                disabled={!canRun}
-              >
-                {running ? 'Running...' : 'Build Tree'}
-              </button>
-            </div>
-
-            {running && (
-              <section className="progress" aria-live="polite">
-                <div
-                  className="progress-bar"
-                  role="progressbar"
-                  aria-valuenow={Math.round(progressPct)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label="Mashtree progress"
-                >
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
-                <p className="progress-text">{progress}</p>
-              </section>
-            )}
-
-            {error && (
-              <section className="error" role="alert">
-                <p>{error}</p>
-              </section>
-            )}
-
-            {genomeNames.length > 0 && (
-              <DistanceMatrix matrix={distanceMatrix} names={genomeNames} />
-            )}
-
-            {newick && <PhyloTree newick={newick} />}
-
-            {logLines.length > 0 && <LogConsole lines={logLines} />}
-          </>
-        ) : (
-          <AboutPage />
-        )}
+        <Routes>
+          <Route path="/" element={<AnalysisPage />} />
+          <Route path="/about" element={<About />} />
+        </Routes>
       </main>
 
-      <footer className="app-footer">
-        <div className="footer-inner">
-          <span>GenomicX &mdash; open-source bioinformatics for the browser</span>
-          <div className="footer-links">
-            <a href="https://github.com/genomicx" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a href="https://genomicx.vercel.app/about" target="_blank" rel="noopener noreferrer">Mission</a>
-            <a href="https://www.happykhan.com/" target="_blank" rel="noopener noreferrer">Nabil-Fareed Alikhan</a>
-          </div>
-        </div>
-      </footer>
+      <AppFooter appName="mashtreewebx" />
     </div>
   )
 }

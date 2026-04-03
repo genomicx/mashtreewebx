@@ -1,4 +1,4 @@
-export function AboutPage() {
+export function About() {
   return (
     <div className="about-page">
       <section>
