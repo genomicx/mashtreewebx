@@ -153,7 +153,7 @@ function App() {
         </Routes>
       </main>
 
-      <AppFooter appName="mashtreewebx" bugReportUrl="https://github.com/genomicx/mashtreewebx/issues" />
+      <AppFooter appName="mashtreewebx" bugReportEmail="nabil@happykhan.com" bugReportUrl="https://github.com/genomicx/mashtreewebx/issues" />
     </div>
   )
 }
