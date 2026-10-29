@@ -4,6 +4,8 @@
 
 MashtreeWebX is a WebAssembly implementation of [mashtree](https://github.com/lskatz/mashtree) by Lee Katz. Upload genome assemblies in FASTA format and get a neighbour-joining tree from Mash distances in seconds, with bootstrap or jackknife support values — all processing in-browser.
 
+[Open MashtreeWebX](https://mashtreex.genomicx.org) · [Source code](https://github.com/genomicx/mashtreewebx)
+
 ## Features
 
 - Neighbour-joining tree from pairwise Mash distances
@@ -23,6 +25,7 @@ MashtreeWebX is a WebAssembly implementation of [mashtree](https://github.com/ls
 ## Getting Started
 
 ```bash
+# Node.js 24
 npm install
 npm run dev
 ```
@@ -35,6 +38,12 @@ Open http://localhost:5173
 npm test           # unit tests
 npm run test:e2e   # end-to-end tests (requires build first)
 ```
+
+## Hosting and interface
+
+The live application runs on Cloudflare Pages at https://mashtreex.genomicx.org. Pushes to `main` deploy automatically with Node.js 24, `npm run build` and the `dist` output directory. Both production and preview builds use the same Node version.
+
+Shared `@genomicx/ui` tokens provide neutral light and dark themes, IBM Plex Sans interface text and IBM Plex Mono data and console text. Fonts are bundled with the application.
 
 ## Contributing
 

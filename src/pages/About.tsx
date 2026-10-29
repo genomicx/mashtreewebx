@@ -84,7 +84,7 @@ export function About() {
           <li><strong>Mash</strong> — MinHash distance estimation (via Aioli/biowasm WebAssembly)</li>
           <li><strong>patristic</strong> — neighbour-joining tree inference (JavaScript, CDC)</li>
           <li><strong>React + Vite</strong> — frontend framework</li>
-          <li><strong>Cloudflare Pages</strong> — global CDN hosting</li>
+          <li><strong>Cloudflare Pages</strong> — global CDN hosting at <a href="https://mashtreex.genomicx.org">mashtreex.genomicx.org</a></li>
         </ul>
       </section>
 
